@@ -1,5 +1,5 @@
-#include "lib/MainWindow.h"
-#include "entry.h"
+#include "lib/header/MainWindow.h"
+#include "lib/header/entry.h"
 #include <iostream>
 
 using namespace std;

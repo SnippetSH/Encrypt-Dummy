@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+#include "header/MainWindow.h"
 
 PCWSTR MainWindow::ClassName() const { return L"MainWindow"; }
 
