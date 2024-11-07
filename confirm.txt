@@ -1,0 +1,6 @@
+// cl 로 빌드 (visual studio 에서 빌드) -> 안됨
+cl /LD /I.\lib entry.cpp lib/MainWindow.cpp /link user32.lib gdi32.lib kernel32.lib /OUT:entry.dll
+
+// mingw32-make 로 빌드 (mingw 에서 빌드)
+mingw32-make
+make
