@@ -1,0 +1,22 @@
+#include <windows.h>
+#include "resource.h"
+
+IDD_CUSTOM_DIALOG DIALOG DISCARDABLE 0, 0, 150, 75
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Custom Dialog"
+FONT 9, "MS Shell Dlg"
+{
+    DEFPUSHBUTTON   "OK", IDOK, 60, 45, 30, 20
+    CTEXT           "Message", IDC_STATIC_TEXT, 15, 15, 120, 30
+}
+
+IDD_CUSTOM_DIALOG_WITH_CANCEL DIALOG DISCARDABLE 0, 0, 150, 75
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Custom Dialog"
+FONT 9, "MS Shell Dlg"
+{
+    DEFPUSHBUTTON   "OK", IDOK, 35, 45, 30, 20
+    PUSHBUTTON      "Cancel", IDCANCEL, 85, 45, 30, 20
+    CTEXT           "Message", IDC_STATIC_TEXT, 15, 15, 120, 30
+}
+

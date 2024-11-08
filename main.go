@@ -3,7 +3,7 @@ package main
 /*
 #cgo CXXFLAGS: -I./lib
 #cgo LDFLAGS: -L. -lentry
-#include "entry.h"
+#include "lib/header/entry.h"
 */
 import "C"
 
