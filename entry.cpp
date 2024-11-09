@@ -1,13 +1,14 @@
-#include "lib/header/MainWindow.h"
 #include "lib/header/entry.h"
 #include <iostream>
 
 using namespace std;
 
+HINSTANCE g_instance = NULL;
+
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
     MainWindow wnd;
 
-    if (!wnd.Create(L"Window", WS_OVERLAPPEDWINDOW)) {
+    if (!wnd.Create(L"Window", WS_OVERLAPPEDWINDOW, 0, 0, 640, 480)) {
         cout << "CreateWindowEx failed: " << GetLastError() << "\n";
         return 0;
     }
@@ -25,5 +26,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 }
 
 int startApp() {
-    return wWinMain(GetModuleHandle(NULL), NULL, GetCommandLineW(), SW_SHOWNORMAL);
+    g_instance = GetModuleHandle(NULL);
+    return wWinMain(g_instance, NULL, GetCommandLineW(), SW_SHOWNORMAL);
 }

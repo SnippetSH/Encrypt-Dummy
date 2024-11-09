@@ -2,7 +2,8 @@
 #define BASEWINDOW_H
 
 #include <windows.h>
-#include <iostream>
+#include <stdio.h>
+#include "Dialog.h"
 
 template <class T>
 class BaseWindow {
@@ -36,8 +37,8 @@ public:
         DWORD dwExStyle = 0,
         int x = CW_USEDEFAULT,
         int y = CW_USEDEFAULT,
-        int nWidth = 780,
-        int nHeight = 520,
+        int nWidth = 520,
+        int nHeight = 320,
         HWND hWndParent = NULL,
         HMENU hMenu = NULL
     ) {
@@ -52,7 +53,7 @@ public:
         // cursor, icon, background, menu name
         wc.hCursor = LoadCursor(NULL, IDC_ARROW);
         wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-        wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        wc.hbrBackground = CreateSolidBrush(RGB(82,94,152));
         wc.lpszMenuName = NULL;
 
         wc.cbClsExtra = 0;
@@ -60,11 +61,10 @@ public:
 
         // std::cout << "class name: " << ClassName() << "\n";
         if (!RegisterClassW(&wc)) {
-            std::cout << "RegisterClassW failed: " << GetLastError() << "\n";
+            printf("RegisterClassW failed: %d\n", GetLastError());
             return FALSE;
         }
 
-        
         m_hwnd = CreateWindowW(
             ClassName(),
             lpWindowName,
@@ -73,7 +73,7 @@ public:
             hWndParent, hMenu,
             GetModuleHandle(NULL),
             this
-        );
+        );  
 
         return (m_hwnd ? TRUE : FALSE);
     }
@@ -83,6 +83,11 @@ protected:
     virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
 
     HWND m_hwnd;
+
+    static Dialog** m_dialog;
+
+public:
+    static Dialog* GetDialog(int index);
 };
 
 #endif // GUI_H

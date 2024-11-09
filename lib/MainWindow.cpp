@@ -1,7 +1,15 @@
 #include "header/MainWindow.h"
+#include "header/BaseWindow.h"
+#include <iostream>
 
+template <>
+Dialog** BaseWindow<MainWindow>::m_dialog = nullptr;
+
+wchar_t* MainWindow::g_fileName = NULL;
+wchar_t* MainWindow::g_userKey = NULL;
 
 PCWSTR MainWindow::ClassName() const { return L"MainWindow"; }
+Dialog* MainWindow::GetDialog(int index) { return BaseWindow::m_dialog[index]; }
 
 LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static HICON icon1 = NULL;
@@ -9,9 +17,16 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static HCURSOR cursor = LoadCursor(NULL, IDC_HAND);
 
     if (uMsg == WM_CREATE) {
+        if (m_dialog == NULL) {
+            m_dialog = new Dialog*[2];
+            m_dialog[0] = new Dialog(false);
+            m_dialog[1] = new Dialog(true);
+        }
+
         RECT rect;
         GetClientRect(Window(), &rect);
         int h = rect.bottom;
+        int w = rect.right;
 
         HWND buttonOpen = CreateWindowExW(
             0,
@@ -58,22 +73,81 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             SendMessageW(buttonOpen, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)icon1);
             SendMessageW(buttonRun, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)icon2);
         }
+
+        HWND staticFileName =CreateWindowExW(
+            0,
+            L"static",
+            L"Selected File: None",
+            WS_VISIBLE | WS_CHILD | SS_CENTER,
+            w / 2 - (w - 100) / 2, h / 2 - (h - 100) / 2, w - 100, h - 100,
+            Window(),
+            (HMENU)IDC_STATIC_FILE_NAME,
+            NULL,
+            NULL
+        );
+        HBRUSH brush = CreateSolidBrush(RGB(82,94,152));
+        SetClassLongPtrW(staticFileName, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
+
+        int editSize = 200;
+        if (w > 1000) {
+            editSize = 500;
+        }
+        m_hEditInput = CreateWindowExW(
+            0,
+            L"edit",
+            L"Please Input Your Key.",
+            WS_CHILD | ES_AUTOHSCROLL | SS_CENTER,
+            w / 2 - (w - editSize) / 2, h / 2 - (50) / 2, w - editSize, 50,
+            Window(),
+            (HMENU)IDC_EDIT_INPUT,
+            NULL,
+            NULL
+        );
+
+        /*
+        HFONT font = CreateFontW(
+            16,                     // nHeight
+            0,                      // nWidth
+            0,                      // nEscapement
+            0,                      // nOrientation
+            FW_NORMAL,             // fnWeight
+            FALSE,                 // fdwItalic
+            FALSE,                 // fdwUnderline
+            FALSE,                 // fdwStrikeOut
+            DEFAULT_CHARSET,       // fdwCharSet
+            OUT_DEFAULT_PRECIS,    // fdwOutputPrecision
+            CLIP_DEFAULT_PRECIS,   // fdwClipPrecision
+            DEFAULT_QUALITY,       // fdwQuality
+            DEFAULT_PITCH | FF_DONTCARE,  // fdwPitchAndFamily
+            L"Consolas"           // lpszFace
+        );
+        */
+        HFONT font = CreateFontW(
+            30, 0, 0, 0,
+            FW_DEMIBOLD, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, 0, 0, 0, 0,
+            L"Consolas"
+        );
+        SendMessageW(m_hEditInput, WM_SETFONT, (WPARAM)font, TRUE);
+        SetClassLongPtrW(m_hEditInput, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
         return 0;    
     }
 
     switch (uMsg) {
         case WM_CLOSE:
-            if (ShowCustomDialogWithCancel(Window(), L"정말 종료하시겠습니까?") == IDOK) {
+            if (GetDialog(1)->ShowDialog(Window(), L"정말 종료하시겠습니까?") == IDOK) {
                 DestroyWindow(Window());
-            }
+            } 
             return 0;
         case WM_PAINT: // 윈도우 창의 크기가 변화하거나, 가려졌다가 보이거나 하는 등의 모든 변화가 생길 때 호출
             {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(Window(), &ps);
             
-                        
-                FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+                HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
+                FillRect(hdc, &ps.rcPaint, hBrush);
+                DeleteObject(hBrush);
+
                 EndPaint(Window(), &ps);
             }
             return 0;
@@ -82,6 +156,8 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 int w = LOWORD(lParam);
                 int h = HIWORD(lParam);
 
+                OnSize(Window(), (UINT)wParam, w, h);
+
                 HWND buttonRun = GetDlgItem(Window(), IDC_BUTTON2);
                 SetWindowPos(buttonRun, NULL,
                     10, h - 10 - 33,
@@ -89,7 +165,23 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                     SWP_NOZORDER
                 );
 
-                OnSize(Window(), (UINT)wParam, w, h);
+                HWND staticFileName = GetDlgItem(Window(), IDC_STATIC_FILE_NAME);
+                SetWindowPos(staticFileName, NULL,
+                    w / 2 - (w - 100) / 2, h / 2 - (h - 100) / 2, 
+                    w - 100, h - 100,
+                    SWP_NOZORDER
+                );
+
+                int editSize = 200;
+                if (w > 1000) {
+                    editSize = 500;
+                }
+                HWND editInput = GetDlgItem(Window(), IDC_EDIT_INPUT);
+                SetWindowPos(editInput, NULL,
+                    w / 2 - (w - editSize) / 2, h / 2 - (50) / 2,
+                    w - editSize, 50,
+                    SWP_NOZORDER
+                );
             }
 
             return 0;
@@ -108,6 +200,10 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 OnButtonOpen(Window(), lParam);
             } else if (LOWORD(wParam) == IDC_BUTTON2) {
                 OnButtonRun(Window(), lParam);
+            } else if (LOWORD(wParam) == IDC_EDIT_INPUT && HIWORD(wParam) == EN_CHANGE) {
+                wchar_t buffer[MAX_PATH] = {};
+                GetWindowTextW(GetDlgItem(Window(), IDC_EDIT_INPUT), buffer, MAX_PATH);
+                g_userKey = buffer;
             }
             return 0;
         case WM_SETCURSOR:
@@ -118,13 +214,51 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 SetCursor(cursor);
                 return TRUE;
             }
-            
+        case WM_CTLCOLORSTATIC: 
+            {
+                HDC hdcStatic = (HDC)wParam;
+                HWND hwndStatic = (HWND)lParam;
+
+                if (GetDlgCtrlID(hwndStatic) == IDC_STATIC_FILE_NAME) {
+                    SetTextColor(hdcStatic, RGB(244,247,233));     // 텍스트 색상
+                    SetBkColor(hdcStatic, RGB(82,94,152)); // 배경 색상
+                    static HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
+                    return (LRESULT)hBrush;
+                }
+
+                return DefWindowProc(Window(), uMsg, wParam, lParam);
+            }
+        case WM_CTLCOLOREDIT:
+            {
+                HDC hdcEdit = (HDC)wParam;
+                HWND hwndEdit = (HWND)lParam;
+                
+                if (GetDlgCtrlID(hwndEdit) == IDC_EDIT_INPUT) {
+                    SetTextColor(hdcEdit, RGB(244,247,233));     // 텍스트 색상
+                    SetBkColor(hdcEdit, RGB(51,59,97)); // 배경 색상
+                    static HBRUSH hBrush = CreateSolidBrush(RGB(51,59,97));
+                    return (LRESULT)hBrush;
+                }
+
+                return DefWindowProc(Window(), uMsg, wParam, lParam);
+            }
+        case WM_GETMINMAXINFO:
+            {
+                LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+                lpMMI->ptMinTrackSize.x = 640;  // 최소 너비
+                lpMMI->ptMinTrackSize.y = 480;  // 최소 높이
+                return 0;
+            }
         default:
             return DefWindowProc(Window(), uMsg, wParam, lParam);
     }
 }
 
-void OnSize(HWND hwnd, UINT state, int width, int height) {
+void MainWindow::OnSize(HWND hwnd, UINT state, int width, int height) {
+    if (width < 640 || height < 480) {
+        return;
+    }
+
     if (state == SIZE_MINIMIZED) {
         ShowWindow(hwnd, SW_MINIMIZE);
     } else if (state == SIZE_MAXIMIZED) {
@@ -136,11 +270,13 @@ void OnSize(HWND hwnd, UINT state, int width, int height) {
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
-void DrawButton(HWND hwnd, LPDRAWITEMSTRUCT lpDrawItem, HICON icon) {
+void MainWindow::DrawButton(HWND hwnd, LPDRAWITEMSTRUCT lpDrawItem, HICON icon) {
     LPDRAWITEMSTRUCT pdis = (LPDRAWITEMSTRUCT)lpDrawItem;
 
     // 배경 지우기 (투명 배경)
-    FillRect(pdis->hDC, &pdis->rcItem, (HBRUSH)GetStockObject(WHITE_BRUSH));
+    HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
+    FillRect(pdis->hDC, &pdis->rcItem, hBrush);
+    DeleteObject(hBrush);
 
     // 아이콘 그리기
     if (icon) {
@@ -150,148 +286,68 @@ void DrawButton(HWND hwnd, LPDRAWITEMSTRUCT lpDrawItem, HICON icon) {
     }
 }
 
-wchar_t* g_message = NULL;
+void MainWindow::OnButtonOpen(HWND hwnd, LPARAM lParam) {
+    OPENFILENAMEW ofn;
+    wchar_t fileName[MAX_PATH] = {};
+    ZeroMemory(&ofn, sizeof(OPENFILENAME));
 
-INT_PTR ShowCustomDialog(HWND hwndParent, const wchar_t* message) {
-    if (g_message) {
-        free(g_message);
-    }
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner = hwnd;
+    ofn.lpstrFile = fileName;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = L"All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = NULL;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    ofn.lpstrInitialDir = L"./";
 
-    g_message = (wchar_t*)malloc(sizeof(wchar_t) * (wcslen(message) + 1));
-    wcscpy(g_message, message);
-    // 리소스에서 대화상자 생성
-    INT_PTR result = DialogBoxParamW(
-        GetModuleHandle(NULL),
-        MAKEINTRESOURCEW(IDD_CUSTOM_DIALOG),
-        hwndParent,
-        CustomDialogProc,
-        (LPARAM)message
-    );
+    if (GetOpenFileNameW(&ofn)) {
+        GetDialog(0)->ShowDialog(hwnd, fileName);
+        g_fileName = fileName;
 
-    if (g_message != NULL) {
-        free(g_message);
-        g_message = NULL;
-    }
+        wchar_t displayFileName[MAX_PATH + 50] = L"Selected File: ";
+        wchar_t tempFileName[MAX_PATH] = {};
+        int cnt = 0, tempCnt = 0;
 
-    return result;
-}
+        for (int i = wcslen(fileName); i > 0; i--) {
+            std::wcout << fileName[i] << " ";
+            if (fileName[i] == '\\') {
+                cnt++;
 
-INT_PTR ShowCustomDialogWithCancel(HWND hwndParent, const wchar_t* message) {
-    if (g_message) {
-        free(g_message);
-    }
-
-    g_message = (wchar_t*)malloc(sizeof(wchar_t) * (wcslen(message) + 1));
-    wcscpy(g_message, message);
-    // 리소스에서 대화상자 생성
-    INT_PTR result = DialogBoxParamW(
-        GetModuleHandle(NULL),
-        MAKEINTRESOURCEW(IDD_CUSTOM_DIALOG_WITH_CANCEL),
-        hwndParent,
-        CustomDialogProc,
-        (LPARAM)message
-    );
-
-    if (g_message != NULL) {
-        free(g_message);
-        g_message = NULL;
-    }
-
-    return result;
-}
-
-INT_PTR CALLBACK CustomDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-        case WM_INITDIALOG: {
-            // 대화 상자가 초기화될 때 호출됩니다.
-            // 대화 상자를 화면 가운데로 이동시키는 예시 코드입니다.
-            RECT rcOwner, rcDlg;
-            GetWindowRect(GetParent(hwndDlg), &rcOwner);
-            GetWindowRect(hwndDlg, &rcDlg);
-
-            int ownerWidth = rcOwner.right - rcOwner.left;
-            int ownerHeight = rcOwner.bottom - rcOwner.top;
-            int dlgWidth = rcDlg.right - rcDlg.left;
-            int dlgHeight = rcDlg.bottom - rcDlg.top;
-
-            int x = rcOwner.left + (ownerWidth - dlgWidth) / 2;
-            int y = rcOwner.top + (ownerHeight - dlgHeight) / 2;
-
-            SetWindowPos(hwndDlg, NULL, x, y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-
-            const wchar_t* caption = L"Dialog";
-            const wchar_t* message = g_message;
-            if (wcscmp((const wchar_t*)lParam, L"Open") == 0) {
-                caption = L"Open";
-
-            } else if (wcscmp((const wchar_t*)lParam, L"Run") == 0) {
-                caption = L"Run";
-            }
-            SetWindowTextW(hwndDlg, caption);
-            SetDlgItemTextW(hwndDlg, IDC_STATIC_TEXT, message);
-            return TRUE;
-        }
-        case WM_COMMAND: {
-            if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, LOWORD(wParam));
-                return TRUE;
-            }
-            break;
-        }
-    }
-    return FALSE;
-}
-
-INT_PTR CALLBACK CustomDialogWithCancelProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-        case WM_INITDIALOG: {
-            // 대화 상자가 초기화될 때 호출됩니다.
-            // 대화 상자를 화면 가운데로 이동시키는 예시 코드입니다.
-            RECT rcOwner, rcDlg;
-            GetWindowRect(GetParent(hwndDlg), &rcOwner);
-            GetWindowRect(hwndDlg, &rcDlg);
-
-            int ownerWidth = rcOwner.right - rcOwner.left;
-            int ownerHeight = rcOwner.bottom - rcOwner.top;
-            int dlgWidth = rcDlg.right - rcDlg.left;
-            int dlgHeight = rcDlg.bottom - rcDlg.top;
-
-            int x = rcOwner.left + (ownerWidth - dlgWidth) / 2;
-            int y = rcOwner.top + (ownerHeight - dlgHeight) / 2;
-
-            SetWindowPos(hwndDlg, NULL, x, y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-
-            const wchar_t* caption = L"Dialog";
-            const wchar_t* message = g_message;
-            if (wcscmp((const wchar_t*)lParam, L"Open") == 0) {
-                caption = message;
-
-            } else if (wcscmp((const wchar_t*)lParam, L"Run") == 0) {
-                caption = message;
-            }
-            SetWindowTextW(hwndDlg, caption);
-            SetDlgItemTextW(hwndDlg, IDC_STATIC_TEXT, message);
-            return TRUE;
-        }
-        case WM_COMMAND: {
-            switch (LOWORD(wParam)) {
-                case IDOK:
-                    EndDialog(hwndDlg, IDOK);
+                if (cnt == 2) {
                     break;
-                case IDCANCEL:
-                    EndDialog(hwndDlg, IDCANCEL);
-                    break;
+                }
             }
-            break;
+            tempFileName[tempCnt++] = fileName[i];
         }
+
+        wchar_t finalFileName[MAX_PATH] = {};
+        for (int i = 0; i < tempCnt; i++) {
+            finalFileName[i] = tempFileName[tempCnt - i - 1];
+        }
+
+        RECT rect;
+        GetClientRect(Window(), &rect);
+        int h = rect.bottom;
+        int w = rect.right;
+        std::cout << "w: " << w << " h: " << h << "\n";
+
+        ShowWindow(m_hEditInput, SW_SHOW);
+        SetFocus(m_hEditInput);
+
+        int editSize = 200;
+        if (w > 1000) {
+            editSize = 500;
+        }
+        SetWindowPos(  
+            m_hEditInput, NULL, w / 2 - (w - editSize) / 2, h / 2 - (50) / 2, w - editSize, 50,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER
+        );
+        wcscat_s(displayFileName, finalFileName);
+        SetWindowTextW(GetDlgItem(hwnd, IDC_STATIC_FILE_NAME), displayFileName);
     }
-    return FALSE;
 }
 
-void OnButtonOpen(HWND hwnd, LPARAM lParam) {
-    ShowCustomDialog(hwnd, L"Open");
-}
-
-void OnButtonRun(HWND hwnd, LPARAM lParam) {
-    ShowCustomDialog(hwnd, L"Run");
+void MainWindow::OnButtonRun(HWND hwnd, LPARAM lParam) {
+    GetDialog(0)->ShowDialog(hwnd, L"Run");
 }
