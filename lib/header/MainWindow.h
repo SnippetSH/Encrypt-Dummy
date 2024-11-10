@@ -5,7 +5,6 @@
 #include "BaseWindow.h"
 #include "Dialog.h"
 #include "../../resources/resource.h"
-#include "../../logic/build/logic.h"
 
 class MainWindow : public BaseWindow<MainWindow> {
 private:

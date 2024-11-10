@@ -425,7 +425,7 @@ void MainWindow::OnButtonRun(HWND hwnd, LPARAM lParam, bool isEncrypt) {
         return;
     }
 
-    HMODULE hModule = LoadLibraryW(L"./logic/build/logic.dll");
+    HMODULE hModule = LoadLibraryW(L"./bin/logic.dll");
     if (hModule == NULL) {
         GetDialog(0)->ShowDialog(hwnd, L"Failed to load logic.dll Please install logic.dll");
         return;
