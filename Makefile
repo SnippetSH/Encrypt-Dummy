@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -I./lib
 LDFLAGS = -shared
 LIBS = -luser32 -lgdi32 -lcomdlg32 -lkernel32
-EXEFLAGS = -mwindows -municode -static-libstdc++ -static-libgcc
+EXEFLAGS = -municode -static-libstdc++ -static-libgcc
 WINDRES = windres
 
 SRCS = entry.cpp lib/MainWindow.cpp lib/Dialog.cpp

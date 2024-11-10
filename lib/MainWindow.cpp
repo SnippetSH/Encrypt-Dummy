@@ -8,281 +8,377 @@ Dialog** BaseWindow<MainWindow>::m_dialog = nullptr;
 wchar_t* MainWindow::g_fileName = NULL;
 wchar_t* MainWindow::g_userKey = NULL;
 
+MainWindow::MainWindow()
+    : m_hEditInput(NULL), m_hStaticUserKeyLength(NULL),
+      m_hButtonOpen(NULL), m_hButtonEncrypt(NULL), m_hButtonDecrypt(NULL),
+      m_hStaticFileName(NULL), m_iconOpen(NULL), m_iconEncrypt(NULL),
+      m_iconDecrypt(NULL), m_cursorHand(NULL) {}
+
 PCWSTR MainWindow::ClassName() const { return L"MainWindow"; }
 Dialog* MainWindow::GetDialog(int index) { return BaseWindow::m_dialog[index]; }
 
 LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    static HICON icon1 = NULL;
-    static HICON icon2 = NULL;
-    static HCURSOR cursor = LoadCursor(NULL, IDC_HAND);
-
-    if (uMsg == WM_CREATE) {
-        if (m_dialog == NULL) {
-            m_dialog = new Dialog*[2];
-            m_dialog[0] = new Dialog(false);
-            m_dialog[1] = new Dialog(true);
-        }
-
-        RECT rect;
-        GetClientRect(Window(), &rect);
-        int h = rect.bottom;
-        int w = rect.right;
-
-        HWND buttonOpen = CreateWindowExW(
-            0,
-            L"button",
-            L"",
-            WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
-            10, 10, 100, 33,
-            Window(),
-            (HMENU)IDC_BUTTON1,
-            NULL,
-            NULL
-        );
-        HWND buttonRun = CreateWindowExW(
-            0,
-            L"button",
-            L"",
-            WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
-            10, h - 10 - 33, 100, 33,
-            Window(),
-            (HMENU)IDC_BUTTON2,
-            NULL,
-            NULL
-        );
-
-        icon1 = (HICON)LoadImageW(
-            NULL,
-            L"./assets/open.ico",
-            IMAGE_ICON,
-            100, 33,
-            LR_LOADFROMFILE
-        );
-
-        icon2 = (HICON)LoadImageW(
-            NULL,
-            L"./assets/run.ico",
-            IMAGE_ICON,
-            100, 33,
-            LR_LOADFROMFILE
-        );
-
-        if (icon1 == NULL || icon2 == NULL) {
-            MessageBoxW(NULL, L"Failed to load icon", L"Error", MB_OK);
-        } else {
-            SendMessageW(buttonOpen, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)icon1);
-            SendMessageW(buttonRun, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)icon2);
-        }
-
-        HWND staticFileName =CreateWindowExW(
-            0,
-            L"static",
-            L"Selected File: None",
-            WS_VISIBLE | WS_CHILD | SS_CENTER,
-            w / 2 - (w - 100) / 2, h / 2 - (h - 100) / 2, w - 100, h - 100,
-            Window(),
-            (HMENU)IDC_STATIC_FILE_NAME,
-            NULL,
-            NULL
-        );
-        HBRUSH brush = CreateSolidBrush(RGB(82,94,152));
-        SetClassLongPtrW(staticFileName, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
-
-        int editSize = 200;
-        if (w > 1000) {
-            editSize = 500;
-        }
-        m_hEditInput = CreateWindowExW(
-            0,
-            L"edit",
-            L"Please Input Your Key.",
-            WS_CHILD | ES_AUTOHSCROLL | SS_CENTER,
-            w / 2 - (w - editSize) / 2, h / 2 - (50) / 2, w - editSize, 50,
-            Window(),
-            (HMENU)IDC_EDIT_INPUT,
-            NULL,
-            NULL
-        );
-
-        /*
-        HFONT font = CreateFontW(
-            16,                     // nHeight
-            0,                      // nWidth
-            0,                      // nEscapement
-            0,                      // nOrientation
-            FW_NORMAL,             // fnWeight
-            FALSE,                 // fdwItalic
-            FALSE,                 // fdwUnderline
-            FALSE,                 // fdwStrikeOut
-            DEFAULT_CHARSET,       // fdwCharSet
-            OUT_DEFAULT_PRECIS,    // fdwOutputPrecision
-            CLIP_DEFAULT_PRECIS,   // fdwClipPrecision
-            DEFAULT_QUALITY,       // fdwQuality
-            DEFAULT_PITCH | FF_DONTCARE,  // fdwPitchAndFamily
-            L"Consolas"           // lpszFace
-        );
-        */
-        HFONT font = CreateFontW(
-            30, 0, 0, 0,
-            FW_DEMIBOLD, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, 0, 0, 0, 0,
-            L"Consolas"
-        );
-        SendMessageW(m_hEditInput, WM_SETFONT, (WPARAM)font, TRUE);
-        SetClassLongPtrW(m_hEditInput, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
-        return 0;    
-    }
-
     switch (uMsg) {
+        case WM_CREATE:
+            return OnCreate();
         case WM_CLOSE:
-            if (GetDialog(1)->ShowDialog(Window(), L"정말 종료하시겠습니까?") == IDOK) {
-                DestroyWindow(Window());
-            } 
-            return 0;
-        case WM_PAINT: // 윈도우 창의 크기가 변화하거나, 가려졌다가 보이거나 하는 등의 모든 변화가 생길 때 호출
-            {
-                PAINTSTRUCT ps;
-                HDC hdc = BeginPaint(Window(), &ps);
-            
-                HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
-                FillRect(hdc, &ps.rcPaint, hBrush);
-                DeleteObject(hBrush);
-
-                EndPaint(Window(), &ps);
-            }
-            return 0;
+            return OnClose();
+        case WM_PAINT:
+            return OnPaint();
         case WM_SIZE:
-            {
-                int w = LOWORD(lParam);
-                int h = HIWORD(lParam);
-
-                OnSize(Window(), (UINT)wParam, w, h);
-
-                HWND buttonRun = GetDlgItem(Window(), IDC_BUTTON2);
-                SetWindowPos(buttonRun, NULL,
-                    10, h - 10 - 33,
-                    100, 33,
-                    SWP_NOZORDER
-                );
-
-                HWND staticFileName = GetDlgItem(Window(), IDC_STATIC_FILE_NAME);
-                SetWindowPos(staticFileName, NULL,
-                    w / 2 - (w - 100) / 2, h / 2 - (h - 100) / 2, 
-                    w - 100, h - 100,
-                    SWP_NOZORDER
-                );
-
-                int editSize = 200;
-                if (w > 1000) {
-                    editSize = 500;
-                }
-                HWND editInput = GetDlgItem(Window(), IDC_EDIT_INPUT);
-                SetWindowPos(editInput, NULL,
-                    w / 2 - (w - editSize) / 2, h / 2 - (50) / 2,
-                    w - editSize, 50,
-                    SWP_NOZORDER
-                );
-            }
-
-            return 0;
+            return OnSize(wParam, lParam);
         case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;
+            return OnDestroy();
         case WM_DRAWITEM:
-            if (wParam == IDC_BUTTON1 && icon1) {
-                DrawButton(Window(), (LPDRAWITEMSTRUCT)lParam, icon1);
-            } else if (wParam == IDC_BUTTON2 && icon2) {
-                DrawButton(Window(), (LPDRAWITEMSTRUCT)lParam, icon2);
-            }
-            return 0;
+            return OnDrawItem(wParam, lParam);
         case WM_COMMAND:
-            if (LOWORD(wParam) == IDC_BUTTON1) {
-                OnButtonOpen(Window(), lParam);
-            } else if (LOWORD(wParam) == IDC_BUTTON2) {
-                OnButtonRun(Window(), lParam);
-            } else if (LOWORD(wParam) == IDC_EDIT_INPUT && HIWORD(wParam) == EN_CHANGE) {
-                wchar_t buffer[MAX_PATH] = {};
-                GetWindowTextW(GetDlgItem(Window(), IDC_EDIT_INPUT), buffer, MAX_PATH);
-                g_userKey = buffer;
-            }
-            return 0;
+            return OnCommand(wParam, lParam);
         case WM_SETCURSOR:
-            if ((HWND)wParam == GetDlgItem(Window(), IDC_BUTTON1)) {
-                SetCursor(cursor);
-                return TRUE;
-            } else if ((HWND)wParam == GetDlgItem(Window(), IDC_BUTTON2)) {
-                SetCursor(cursor);
-                return TRUE;
-            }
-        case WM_CTLCOLORSTATIC: 
-            {
-                HDC hdcStatic = (HDC)wParam;
-                HWND hwndStatic = (HWND)lParam;
-
-                if (GetDlgCtrlID(hwndStatic) == IDC_STATIC_FILE_NAME) {
-                    SetTextColor(hdcStatic, RGB(244,247,233));     // 텍스트 색상
-                    SetBkColor(hdcStatic, RGB(82,94,152)); // 배경 색상
-                    static HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
-                    return (LRESULT)hBrush;
-                }
-
-                return DefWindowProc(Window(), uMsg, wParam, lParam);
-            }
+            return OnSetCursor(wParam, lParam);
+        case WM_CTLCOLORSTATIC:
+            return OnCtlColorStatic(wParam, lParam);
         case WM_CTLCOLOREDIT:
-            {
-                HDC hdcEdit = (HDC)wParam;
-                HWND hwndEdit = (HWND)lParam;
-                
-                if (GetDlgCtrlID(hwndEdit) == IDC_EDIT_INPUT) {
-                    SetTextColor(hdcEdit, RGB(244,247,233));     // 텍스트 색상
-                    SetBkColor(hdcEdit, RGB(51,59,97)); // 배경 색상
-                    static HBRUSH hBrush = CreateSolidBrush(RGB(51,59,97));
-                    return (LRESULT)hBrush;
-                }
-
-                return DefWindowProc(Window(), uMsg, wParam, lParam);
-            }
+            return OnCtlColorEdit(wParam, lParam);
         case WM_GETMINMAXINFO:
-            {
-                LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
-                lpMMI->ptMinTrackSize.x = 640;  // 최소 너비
-                lpMMI->ptMinTrackSize.y = 480;  // 최소 높이
-                return 0;
-            }
+            return OnGetMinMaxInfo(lParam);
         default:
             return DefWindowProc(Window(), uMsg, wParam, lParam);
     }
 }
 
-void MainWindow::OnSize(HWND hwnd, UINT state, int width, int height) {
+LRESULT MainWindow::OnCreate() {
+    if (m_dialog == NULL) {
+        m_dialog = new Dialog*[2];
+        m_dialog[0] = new Dialog(false);
+        m_dialog[1] = new Dialog(true);
+    }
+
+    LoadIcons();
+    CreateControls();
+
+    return 0;
+}
+
+void MainWindow::LoadIcons() {
+    m_iconOpen = (HICON)LoadImageW(
+        NULL,
+        L"./assets/open.ico",
+        IMAGE_ICON,
+        81, 27,
+        LR_LOADFROMFILE
+    );
+
+    m_iconEncrypt = (HICON)LoadImageW(
+        NULL,
+        L"./assets/encrypt.ico",
+        IMAGE_ICON,
+        81, 27,
+        LR_LOADFROMFILE
+    );
+
+    m_iconDecrypt = (HICON)LoadImageW(
+        NULL,
+        L"./assets/decrypt.ico",
+        IMAGE_ICON,
+        81, 27,
+        LR_LOADFROMFILE
+    );
+
+    m_cursorHand = LoadCursor(NULL, IDC_HAND);
+
+    if (m_iconOpen == NULL || m_iconEncrypt == NULL || m_iconDecrypt == NULL) {
+        MessageBoxW(NULL, L"Failed to load icons", L"Error", MB_OK);
+    }
+}
+
+void MainWindow::CreateControls() {
+    RECT rect;
+    GetClientRect(Window(), &rect);
+    int h = rect.bottom;
+    int w = rect.right;
+
+    m_hButtonOpen = CreateWindowExW(
+        0,
+        L"button",
+        L"",
+        WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+        10, 10, 81, 27,
+        Window(),
+        (HMENU)IDC_BUTTON1,
+        NULL,
+        NULL
+    );
+
+    m_hButtonEncrypt = CreateWindowExW(
+        0,
+        L"button",
+        L"",
+        WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+        100, 10, 81, 27,
+        Window(),
+        (HMENU)IDC_BUTTON2,
+        NULL,
+        NULL
+    );
+
+    m_hButtonDecrypt = CreateWindowExW(
+        0,
+        L"button",
+        L"",
+        WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+        190, 10, 81, 27,
+        Window(),
+        (HMENU)IDC_BUTTON3,
+        NULL,
+        NULL
+    );
+
+    if (m_iconOpen && m_iconEncrypt && m_iconDecrypt) {
+        SendMessageW(m_hButtonOpen, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)m_iconOpen);
+        SendMessageW(m_hButtonEncrypt, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)m_iconEncrypt);
+        SendMessageW(m_hButtonDecrypt, BM_SETIMAGE, (WPARAM)IMAGE_ICON, (LPARAM)m_iconDecrypt);
+    }
+
+    m_hStaticFileName = CreateWindowExW(
+        0,
+        L"static",
+        L"Selected File: None",
+        WS_VISIBLE | WS_CHILD | SS_CENTER,
+        w / 2 - (w - 100) / 2, 50, w - 100, 40,
+        Window(),
+        (HMENU)IDC_STATIC_FILE_NAME,
+        NULL,
+        NULL
+    );
+
+    HBRUSH brush = CreateSolidBrush(RGB(82,94,152));
+    SetClassLongPtrW(m_hStaticFileName, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
+
+    int height = 0;
+    RECT rect1;
+    if (GetWindowRect(m_hStaticFileName, &rect1)) {
+        POINT topLeft = { rect1.left, rect1.top };
+        ScreenToClient(Window(), &topLeft);
+        height = topLeft.y;
+    }
+
+    m_hStaticUserKeyLength = CreateWindowExW(
+        0,
+        L"static",
+        L"",
+        WS_CHILD | SS_CENTER,
+        w / 2 - (w - 100) / 2, height + 60, w - 100, 40,
+        Window(),
+        (HMENU)IDC_STATIC_USER_KEY_LENGTH,
+        NULL,
+        NULL
+    );
+
+    SetClassLongPtrW(m_hStaticUserKeyLength, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
+
+    int editSize = w / 2;
+    m_hEditInput = CreateWindowExW(
+        0,
+        L"edit",
+        L"Please Input Your Key.",
+        WS_CHILD | ES_AUTOHSCROLL | SS_CENTER,
+        w / 2 - (editSize) / 2, 180,
+        editSize, 50,
+        Window(),
+        (HMENU)IDC_EDIT_INPUT,
+        NULL,
+        NULL
+    );
+
+    HFONT fontEdit = CreateFontW(
+        30, 0, 0, 0,
+        FW_DEMIBOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, 0, 0, 0, 0,
+        L"Consolas"
+    );
+    SendMessageW(m_hEditInput, WM_SETFONT, (WPARAM)fontEdit, TRUE);
+    SetClassLongPtrW(m_hEditInput, GCLP_HBRBACKGROUND, (LONG_PTR)brush);
+
+    DeleteObject(brush);
+}
+
+void MainWindow::AdjustControlPositions(int w, int h) {
+    SetWindowPos(m_hStaticFileName, NULL,
+        w / 2 - (w - 100) / 2, 50,
+        w - 100, 40,
+        SWP_NOZORDER
+    );
+
+    SetWindowPos(m_hStaticUserKeyLength, NULL,
+        w / 2 - (w - 100) / 2, 110,
+        w - 100, 40,
+        SWP_NOZORDER
+    );
+
+    int editSize = w / 2;
+    SetWindowPos(m_hEditInput, NULL,
+        w / 2 - (editSize) / 2, 180,
+        editSize, 50,
+        SWP_NOZORDER
+    );
+
+    SetWindowPos(m_hButtonOpen, NULL, 10, 10, 81, 27, SWP_NOZORDER);
+    SetWindowPos(m_hButtonEncrypt, NULL, 105, 10, 81, 27, SWP_NOZORDER);
+    SetWindowPos(m_hButtonDecrypt, NULL, 200, 10, 81, 27, SWP_NOZORDER);
+}
+
+LRESULT MainWindow::OnSize(WPARAM wParam, LPARAM lParam) {
+    int width = LOWORD(lParam);
+    int height = HIWORD(lParam);
+    OnSizeHandle(Window(), (UINT)wParam, width, height);
+
+    AdjustControlPositions(width, height);
+
+    return 0;
+}
+
+void MainWindow::OnSizeHandle(HWND hwnd, UINT state, int width, int height) {
     if (width < 640 || height < 480) {
         return;
     }
 
-    if (state == SIZE_MINIMIZED) {
-        ShowWindow(hwnd, SW_MINIMIZE);
-    } else if (state == SIZE_MAXIMIZED) {
-        ShowWindow(hwnd, SW_MAXIMIZE);
-    } else if (state == SIZE_RESTORED) {
+    if (state == SIZE_RESTORED) {
         ShowWindow(hwnd, SW_RESTORE);
     }
 
-    InvalidateRect(hwnd, NULL, TRUE);
+    InvalidateRect(hwnd, NULL, TRUE);  
+}
+
+LRESULT MainWindow::OnPaint() {
+    PAINTSTRUCT ps;
+    HDC hdc = BeginPaint(Window(), &ps);
+
+    HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
+    FillRect(hdc, &ps.rcPaint, hBrush);
+    DeleteObject(hBrush);
+
+    EndPaint(Window(), &ps);
+    return 0;
+}
+
+LRESULT MainWindow::OnClose() {
+    if (GetDialog(1)->ShowDialog(Window(), L"정말 종료하시겠습니까?") == IDOK) {
+        DestroyWindow(Window());
+    } 
+    return 0;
+}
+
+LRESULT MainWindow::OnDestroy() {
+    PostQuitMessage(0);
+    return 0;
+}
+
+LRESULT MainWindow::OnDrawItem(WPARAM wParam, LPARAM lParam) {
+    if (wParam == IDC_BUTTON1 && m_iconOpen) {
+        DrawButton(Window(), (LPDRAWITEMSTRUCT)lParam, m_iconOpen);
+    } else if (wParam == IDC_BUTTON2 && m_iconEncrypt) {
+        DrawButton(Window(), (LPDRAWITEMSTRUCT)lParam, m_iconEncrypt);
+    } else if (wParam == IDC_BUTTON3 && m_iconDecrypt) {
+        DrawButton(Window(), (LPDRAWITEMSTRUCT)lParam, m_iconDecrypt);
+    }
+    return 0;
+}
+
+LRESULT MainWindow::OnCommand(WPARAM wParam, LPARAM lParam) {
+    switch (LOWORD(wParam)) {
+        case IDC_BUTTON1:
+            OnButtonOpen(Window(), lParam);
+            break;
+        case IDC_BUTTON2:
+            if (g_fileName != NULL && g_userKey != NULL) {
+                OnButtonRun(Window(), lParam, true);
+            }
+            break;
+        case IDC_BUTTON3:
+            if (g_fileName != NULL && g_userKey != NULL) {
+                OnButtonRun(Window(), lParam, false);
+            }
+            break;
+        case IDC_EDIT_INPUT:
+            if (HIWORD(wParam) == EN_CHANGE) {
+                wchar_t buffer[MAX_PATH] = {};
+                GetWindowTextW(m_hEditInput, buffer, MAX_PATH);
+                if (g_userKey != NULL) {
+                    delete[] g_userKey;
+                }
+                g_userKey = new wchar_t[wcslen(buffer) + 1];
+                wcscpy_s(g_userKey, wcslen(buffer) + 1, buffer);
+
+                wchar_t userKeyLength[10] = {};
+                int userKeyLengthInt = wcslen(g_userKey);
+                wcscpy_s(userKeyLength, 10, std::to_wstring(userKeyLengthInt).c_str());
+                wchar_t message[MAX_PATH + 50] = L"Current User Key's length: ";
+                wcscat_s(message, userKeyLength);
+                SetWindowTextW(m_hStaticUserKeyLength, message);
+            }
+            break;
+        default:
+            return DefWindowProc(Window(), WM_COMMAND, wParam, lParam);
+    }
+    return 0;
+}
+
+LRESULT MainWindow::OnSetCursor(WPARAM wParam, LPARAM lParam) {
+    HWND hWndCursor = (HWND)wParam;
+
+    if (hWndCursor == m_hButtonOpen || hWndCursor == m_hButtonEncrypt || hWndCursor == m_hButtonDecrypt) {
+        SetCursor(m_cursorHand);
+        return TRUE;
+    }
+    return DefWindowProc(Window(), WM_SETCURSOR, wParam, lParam);
+}
+
+LRESULT MainWindow::OnCtlColorStatic(WPARAM wParam, LPARAM lParam) {
+    HDC hdcStatic = (HDC)wParam;
+    HWND hwndStatic = (HWND)lParam;
+
+    if (hwndStatic == m_hStaticFileName || hwndStatic == m_hStaticUserKeyLength) {
+        SetTextColor(hdcStatic, RGB(244,247,233));
+        SetBkColor(hdcStatic, RGB(82,94,152));
+        static HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
+        return (LRESULT)hBrush;
+    }
+    return DefWindowProc(Window(), WM_CTLCOLORSTATIC, wParam, lParam);
+}
+
+LRESULT MainWindow::OnCtlColorEdit(WPARAM wParam, LPARAM lParam) {
+    HDC hdcEdit = (HDC)wParam;
+    HWND hwndEdit = (HWND)lParam;
+    
+    if (hwndEdit == m_hEditInput) {
+        SetTextColor(hdcEdit, RGB(244,247,233));
+        SetBkColor(hdcEdit, RGB(51,59,97));
+        static HBRUSH hBrush = CreateSolidBrush(RGB(51,59,97));
+        return (LRESULT)hBrush;
+    }
+    return DefWindowProc(Window(), WM_CTLCOLOREDIT, wParam, lParam);
+}
+
+LRESULT MainWindow::OnGetMinMaxInfo(LPARAM lParam) {
+    LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+    lpMMI->ptMinTrackSize.x = 640;
+    lpMMI->ptMinTrackSize.y = 480;
+    lpMMI->ptMaxTrackSize.x = 640;
+    lpMMI->ptMaxTrackSize.y = 480;
+    return 0;
 }
 
 void MainWindow::DrawButton(HWND hwnd, LPDRAWITEMSTRUCT lpDrawItem, HICON icon) {
     LPDRAWITEMSTRUCT pdis = (LPDRAWITEMSTRUCT)lpDrawItem;
 
-    // 배경 지우기 (투명 배경)
     HBRUSH hBrush = CreateSolidBrush(RGB(82,94,152));
     FillRect(pdis->hDC, &pdis->rcItem, hBrush);
     DeleteObject(hBrush);
 
-    // 아이콘 그리기
     if (icon) {
-        int iconX = (pdis->rcItem.right - pdis->rcItem.left - 100) / 2; // 가운데 정렬
-        int iconY = (pdis->rcItem.bottom - pdis->rcItem.top - 33) / 2;
-        DrawIconEx(pdis->hDC, pdis->rcItem.left + iconX, pdis->rcItem.top + iconY, icon, 100, 33, 0, NULL, DI_NORMAL);
+        int iconX = (pdis->rcItem.right - pdis->rcItem.left - 81) / 2;
+        int iconY = (pdis->rcItem.bottom - pdis->rcItem.top - 27) / 2;
+        DrawIconEx(pdis->hDC, pdis->rcItem.left + iconX, pdis->rcItem.top + iconY, icon, 81, 27, 0, NULL, DI_NORMAL);
     }
 }
 
@@ -303,51 +399,116 @@ void MainWindow::OnButtonOpen(HWND hwnd, LPARAM lParam) {
 
     if (GetOpenFileNameW(&ofn)) {
         GetDialog(0)->ShowDialog(hwnd, fileName);
-        g_fileName = fileName;
+
+        if (g_fileName != NULL) {
+            delete[] g_fileName;
+        }
+        g_fileName = new wchar_t[wcslen(fileName) + 1];
+        wcscpy_s(g_fileName, wcslen(fileName) + 1, fileName);
 
         wchar_t displayFileName[MAX_PATH + 50] = L"Selected File: ";
-        wchar_t tempFileName[MAX_PATH] = {};
-        int cnt = 0, tempCnt = 0;
+        wchar_t* finalFileName = makeFileName(fileName);
+        wcscat_s(displayFileName, finalFileName);
+        SetWindowTextW(m_hStaticFileName, displayFileName);
 
-        for (int i = wcslen(fileName); i > 0; i--) {
-            std::wcout << fileName[i] << " ";
-            if (fileName[i] == '\\') {
-                cnt++;
-
-                if (cnt == 2) {
-                    break;
-                }
-            }
-            tempFileName[tempCnt++] = fileName[i];
-        }
-
-        wchar_t finalFileName[MAX_PATH] = {};
-        for (int i = 0; i < tempCnt; i++) {
-            finalFileName[i] = tempFileName[tempCnt - i - 1];
-        }
-
-        RECT rect;
-        GetClientRect(Window(), &rect);
-        int h = rect.bottom;
-        int w = rect.right;
-        std::cout << "w: " << w << " h: " << h << "\n";
+        delete[] finalFileName;
 
         ShowWindow(m_hEditInput, SW_SHOW);
         SetFocus(m_hEditInput);
-
-        int editSize = 200;
-        if (w > 1000) {
-            editSize = 500;
-        }
-        SetWindowPos(  
-            m_hEditInput, NULL, w / 2 - (w - editSize) / 2, h / 2 - (50) / 2, w - editSize, 50,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER
-        );
-        wcscat_s(displayFileName, finalFileName);
-        SetWindowTextW(GetDlgItem(hwnd, IDC_STATIC_FILE_NAME), displayFileName);
+        ShowWindow(m_hStaticUserKeyLength, SW_SHOW);
+        SetWindowTextW(m_hStaticUserKeyLength, L"User Key's length must be 32");
     }
 }
 
-void MainWindow::OnButtonRun(HWND hwnd, LPARAM lParam) {
-    GetDialog(0)->ShowDialog(hwnd, L"Run");
+void MainWindow::OnButtonRun(HWND hwnd, LPARAM lParam, bool isEncrypt) {
+    if (g_fileName == NULL || g_userKey == NULL) {
+        return;
+    }
+
+    HMODULE hModule = LoadLibraryW(L"./logic/build/logic.dll");
+    if (hModule == NULL) {
+        GetDialog(0)->ShowDialog(hwnd, L"Failed to load logic.dll Please install logic.dll");
+        return;
+    }
+
+    typedef char* (*EncryptFunc)(const char*, const char*);
+    typedef char* (*DecryptFunc)(const char*, const char*);
+    typedef char* (*WcharToCharFunc)(wchar_t*);
+    EncryptFunc Encrypt = (EncryptFunc)GetProcAddress(hModule, "Encrypt");
+    DecryptFunc Decrypt = (DecryptFunc)GetProcAddress(hModule, "Decrypt");
+    WcharToCharFunc WcharToChar = (WcharToCharFunc)GetProcAddress(hModule, "WcharToChar");
+
+    if (Encrypt == NULL || WcharToChar == NULL || Decrypt == NULL) {
+        GetDialog(0)->ShowDialog(hwnd, L"Failed to get Encrypt or WcharToChar or Decrypt function");
+        FreeLibrary(hModule);
+        return;
+    }
+
+    char* fileName = WcharToChar(g_fileName);
+    char* userKey = WcharToChar(g_userKey);
+
+    std::string userKeyStr = userKey;
+
+    if (userKeyStr.length() < 32) {
+        userKeyStr.append(32 - userKeyStr.length(), '0');
+    } else if (userKeyStr.length() > 32) {
+        GetDialog(0)->ShowDialog(hwnd, L"User Key's length must be 32");
+        free(fileName);
+        free(userKey);
+        FreeLibrary(hModule);
+        return;
+    }
+
+    free(userKey);
+    userKey = (char*)malloc(33);
+    memcpy(userKey, userKeyStr.c_str(), 32);
+    userKey[32] = '\0';
+
+    char* result = NULL;
+    if (isEncrypt) {
+        result = Encrypt(fileName, userKey);
+    } else {
+        result = Decrypt(fileName, userKey);
+    }
+
+    if (result == NULL) {
+        wchar_t message[MAX_PATH + 50] = {};
+        wcscpy_s(message, isEncrypt ? L"Success to Encrypt your File: " : L"Success to Decrypt your File: ");
+        wchar_t* finalFileName = makeFileName(g_fileName);
+        wcscat_s(message, finalFileName);
+        GetDialog(0)->ShowDialog(hwnd, message);
+        delete[] finalFileName;
+    } else {
+        wchar_t message[MAX_PATH + 50] = {};
+        wcscpy_s(message, isEncrypt ? L"Failed to Encrypt your File: " : L"Failed to Decrypt your File: ");
+        wcscat_s(message, g_fileName);
+        GetDialog(0)->ShowDialog(hwnd, message);
+    }
+
+    free(fileName);
+    free(userKey);
+    FreeLibrary(hModule);
+}
+
+wchar_t* MainWindow::makeFileName(wchar_t* fileName) {
+    wchar_t tempFileName[MAX_PATH] = {};
+    int cnt = 0, tempCnt = 0;
+
+    for (int i = wcslen(fileName) - 1; i >= 0; i--) {
+        if (fileName[i] == '\\') {
+            cnt++;
+            if (cnt == 2) {
+                break;
+            }
+        }
+        tempFileName[tempCnt++] = fileName[i];
+    }
+
+    wchar_t* finalFileName = new wchar_t[tempCnt + 1];
+    for (int i = 0; i < tempCnt; i++) {
+        finalFileName[i] = tempFileName[tempCnt - i - 1];
+    }
+    finalFileName[tempCnt] = L'\0';
+
+    return finalFileName;
 }

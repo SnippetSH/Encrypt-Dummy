@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-func EncryptStrewam(key []byte, w io.Writer) (io.Writer, []byte, error) {
+func EncryptStream(key []byte, w io.Writer) (io.Writer, []byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, nil, err
@@ -36,7 +36,7 @@ func EncryptFile(inputFile string, key []byte) error {
 
 	var encryptData []byte
 	encryptWriter := bytes.NewBuffer(encryptData)
-	encryptStream, iv, err := EncryptStrewam(key, encryptWriter)
+	encryptStream, iv, err := EncryptStream(key, encryptWriter)
 	if err != nil {
 		return err
 	}
