@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -I./lib
 LDFLAGS = -shared
 LIBS = -luser32 -lgdi32 -lcomdlg32 -lkernel32
-EXEFLAGS = -municode -static-libstdc++ -static-libgcc
+EXEFLAGS = -mwindows -municode -static-libstdc++ -static-libgcc
 WINDRES = windres
 
 SRCS = entry.cpp lib/MainWindow.cpp lib/Dialog.cpp
@@ -11,7 +11,12 @@ RC_OBJS = resources/DialogResource.res
 TARGET_DLL = c_entry.dll
 TARGET_EXE = entry.exe
 
-all: $(TARGET_DLL) $(TARGET_EXE) $(RC_OBJS) $(GO_TARGET)
+LOGIC_DLL = logic/build/logic.dll
+
+all: $(TARGET_DLL) $(TARGET_EXE) $(RC_OBJS) $(LOGIC_DLL)
+
+$(LOGIC_DLL):
+	$(MAKE) -C logic
 
 $(RC_OBJS): resources/DialogResource.rc
 	windres -i $< -o $@ --input-format=rc --output-format=coff
