@@ -1,53 +1,56 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <tchar.h>
 #include "BaseWindow.h"
 #include "Dialog.h"
 #include "../../resources/resource.h"
 
 class MainWindow : public BaseWindow<MainWindow> {
+// member variables
+/* 
+    Crypto: 파일 암호화 및 복호화
+    Dummy: 빈 파일 생성
+
+    m_hSwitchToCrypto: 암호화 버튼
+    m_hSwitchToDummy: 추가 예정
+    m_iconSwitchToCrypto: 암호화 아이콘
+    m_iconSwitchToDummy: 추가 예정
+*/
 private:
-    static wchar_t* g_fileName;
-    static wchar_t* g_userKey;
-    HWND m_hEditInput;
-    HWND m_hStaticUserKeyLength;
-    HWND m_hButtonOpen;
-    HWND m_hButtonEncrypt;
-    HWND m_hButtonDecrypt;
-    HWND m_hStaticFileName;
-    HICON m_iconOpen;
-    HICON m_iconEncrypt;
-    HICON m_iconDecrypt;
+    HWND m_hSwitchToCrypto;
+    HWND m_hSwitchToDummy; // 추가 예정
+    HICON m_iconSwitchToCrypto;
+    HICON m_iconSwitchToDummy; // 추가 예정
     HCURSOR m_cursorHand;
-
-    void CreateControls();
+    int m_nextWindowCode;
+// member functions
+private:
     void LoadIcons();
+    void CreateControls();
+    void OnSizeHandle(HWND hwnd, UINT state, int width, int height);
+    void OnButtonSwitch(int mode);
     void AdjustControlPositions(int width, int height);
-    wchar_t* makeFileName(wchar_t* fileName);
+    void DrawButton(HWND hwnd, LPDRAWITEMSTRUCT lpDrawItem, HICON icon);
 
-    // 메시지 핸들러 함수
+// message handlers
+private:
     LRESULT OnCreate();
     LRESULT OnClose();
     LRESULT OnPaint();
+    LRESULT OnSetCursor(WPARAM wParam, LPARAM lParam);
     LRESULT OnSize(WPARAM wParam, LPARAM lParam);
     LRESULT OnDestroy();
     LRESULT OnDrawItem(WPARAM wParam, LPARAM lParam);
     LRESULT OnCommand(WPARAM wParam, LPARAM lParam);
-    LRESULT OnSetCursor(WPARAM wParam, LPARAM lParam);
-    LRESULT OnCtlColorStatic(WPARAM wParam, LPARAM lParam);
-    LRESULT OnCtlColorEdit(WPARAM wParam, LPARAM lParam);
     LRESULT OnGetMinMaxInfo(LPARAM lParam);
-    void OnButtonRun(HWND hwnd, LPARAM lParam, bool isEncrypt);
-    void OnButtonOpen(HWND hwnd, LPARAM lParam);
-    void DrawButton(HWND hwnd, LPDRAWITEMSTRUCT lpDrawItem, HICON icon);
-    void OnSizeHandle(HWND hwnd, UINT state, int width, int height);
 
+// public functions
 public:
     MainWindow();
     PCWSTR ClassName() const override;
     LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override;
     static Dialog* GetDialog(int index);
+    int GetNextWindowCode() override;
 };
 
-#endif
+#endif // MAINWINDOW_H

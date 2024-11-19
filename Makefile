@@ -5,7 +5,7 @@ LIBS = -luser32 -lgdi32 -lcomdlg32 -lkernel32
 EXEFLAGS = -mwindows -municode -static-libstdc++ -static-libgcc
 WINDRES = windres
 
-SRCS = entry.cpp lib/MainWindow.cpp lib/Dialog.cpp
+SRCS = entry.cpp lib/MainWindow.cpp lib/Dialog.cpp lib/CryptoWindow.cpp 
 OBJS = $(SRCS:.cpp=.o)
 RC_OBJS = resources/DialogResource.res
 TARGET_DLL = c_entry.dll

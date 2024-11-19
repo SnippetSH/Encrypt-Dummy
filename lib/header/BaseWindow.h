@@ -5,12 +5,37 @@
 #include <stdio.h>
 #include "Dialog.h"
 
+#define BG_COLOR RGB(226, 231, 255)
+#define TEXT_COLOR RGB(57, 57, 57)
+#define EDIT_COLOR RGB(209, 209, 212)
+
+class IBaseWindow {
+public:
+    virtual ~IBaseWindow() = default;
+    virtual PCWSTR ClassName() const = 0;
+    virtual LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) = 0;
+    virtual BOOL Create(
+        PCWSTR lpWindowName,
+        DWORD dwStyle,
+        DWORD dwExStyle = 0,
+        int x = CW_USEDEFAULT,
+        int y = CW_USEDEFAULT,
+        int nWidth = 520,
+        int nHeight = 320,
+        HWND hWndParent = NULL,
+        HMENU hMenu = NULL
+    ) = 0;
+
+    virtual HWND Window() const = 0;
+    virtual int GetNextWindowCode() = 0;
+};
+
 template <class T>
-class BaseWindow {
+class BaseWindow : public IBaseWindow {
 public:
     BaseWindow() : m_hwnd(NULL) {}
     HWND Window() const { return m_hwnd; }
-
+    
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         T* pThis = NULL;
 

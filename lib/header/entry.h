@@ -3,6 +3,7 @@
 
 #include "c_entry.h"
 #include <windows.h>
+#include "CryptoWindow.h"
 #include "MainWindow.h"
 
 extern HINSTANCE g_instance;
